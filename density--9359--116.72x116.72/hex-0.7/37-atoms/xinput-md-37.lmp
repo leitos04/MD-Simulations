@@ -1,0 +1,64 @@
+variable        nn equal 9359   #check correct density
+
+#------------------------------- PART 1 OF SCRIPT ----------------------------------------
+variable        duration        equal 1E7 #1E7 in supercomputer
+variable        save_period     equal ${duration}/100
+variable	seed		equal 18331 
+variable	seed0		equal 18331+1
+
+variable	ll		equal 58.36 #For a exact density of 0.7343
+
+units          	lj 
+dimension       2
+boundary        p p p 
+region          box  block   -${ll} ${ll} -${ll} ${ll} -0.5 0.5
+create_box      1 box
+
+mass            1 1
+
+
+pair_style      lj/cut $(2^(1/6)) 
+pair_coeff      1 1 1.0 1.00 $(2^(1/6)) 
+pair_modify     shift yes
+
+pair_write      1 1 500 r 0.1 3.0 table.txt LJ
+
+neighbor 	0.3 bin
+
+create_atoms    1 random ${nn} ${seed} box
+
+fix 		1 all enforce2d
+
+variable        scale equal 0.7 #check correct hex scaling factor
+variable        r equal 3.25 #check correct radius; 3.25 for 37 atoms 
+# ------------------------------------- PART 2 OF SCRIPT ---------------------------------------
+lattice         hex ${scale}
+region          mysphere1 sphere 0.0 0.0 0.0 $r side in
+region          mysphere2 sphere 0.0 0.0 0.0 $r side out
+region          mysphere3 sphere 0.0 0.0 0.0 $(v_r+(v_r*0.5)) side in
+region          mysphere4 sphere 0.0 0.0 0.0 $(v_r+(v_r*0.5)) side out
+delete_atoms    region mysphere3 compress yes
+create_atoms    1 region mysphere1
+
+variable        N	equal count(all)
+variable        N_	equal ${nn}-${N}
+create_atoms    1 random ${N_}  ${seed0} mysphere4
+
+minimize        1.0e-4 1.0e-6 1000 10000
+
+reset_timestep	0
+
+
+group		IN  region mysphere1
+group		OUT region mysphere2
+
+fix             mynvt OUT nvt temp 0.025 0.025 $(100.0*dt)
+
+dump            001 all atom ${save_period} dump.lammpstrj
+dump_modify	001 sort id
+
+dump            002 OUT atom ${save_period} dump-out.lammpstrj
+dump_modify     002 sort id
+
+thermo		${save_period}
+run		${duration}

@@ -1,0 +1,32 @@
+variable        nn equal 10000   #check correct density
+
+#------------------------------- PART 1 OF SCRIPT ----------------------------------------
+variable        duration        equal 1E7 #1E7 in supercomputer
+variable        save_period     equal ${duration}/100
+variable	seed		equal 18331 
+variable	seed0		equal 18331+1
+
+variable	ll		equal 58.36 #For a exact density of 0.7343
+
+units          	lj 
+dimension       2
+boundary        p p p 
+region          box  block   -${ll} ${ll} -${ll} ${ll} -0.5 0.5
+create_box      1 box
+
+mass            1 1
+
+
+pair_style      lj/cut $(2^(1/6)) 
+pair_coeff      1 1 1.0 1.00 $(2^(1/6)) 
+pair_modify     shift yes
+
+pair_write      1 1 500 r 0.1 3.0 table.txt LJ
+
+neighbor 	0.3 bin
+
+create_atoms    1 random ${nn} ${seed} box
+
+fix 		1 all enforce2d
+
+variable        scale equal 0.6 #check correct hex scaling factor

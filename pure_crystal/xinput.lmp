@@ -1,0 +1,38 @@
+variable 	duration        equal 1E7
+variable        save_period     equal ${duration}/100
+variable	seed		equal 18331 
+variable	seed0		equal 18331+1
+
+units          	lj 
+dimension       2
+boundary        p p p
+variable 	l		equal 58.5 
+region          box  block   -$l $l -$l $l -0.5 0.5
+create_box      1 box
+
+mass            1 1
+
+variable	coff		equal 2^(1/6)
+
+pair_style      lj/cut ${coff} 
+pair_coeff      1 1 1.0 1.00 ${coff}  
+pair_modify     shift yes
+neighbor 	0.3 bin
+
+fix 		1 all enforce2d
+
+variable 	scale equal 0.6
+
+lattice         hex ${scale}
+
+create_atoms    1 region box
+
+minimize        1.0e-4 1.0e-6 1000 10000 # remove !!
+reset_timestep	0
+
+dump            001 all atom ${save_period} dump.lammpstrj
+dump_modify	001 sort id
+
+
+
+run				0 #${duration}
